@@ -1,7 +1,9 @@
+import org.apache.tools.ant.taskdefs.condition.Os
 apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion 28
+    ndkVersion "21.1.6352462"
     defaultConfig {
         minSdkVersion 15
         targetSdkVersion 28
@@ -44,10 +46,14 @@ dependencies {
 
 // call regular ndk-build(.cmd) script from app directory
 task ndkBuild(type: Exec) {
-    String ndkDir = android.ndkDirectory
-    commandLine "$ndkDir/ndk-build", '-j8', '-C', file('src/main/jni').absolutePath
+    def ndkDir = android.ndkDirectory
+    println "ndkDir: " + ndkDir
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "$ndkDir/ndk-build.cmd", '-j8', '-C', file('src/main/jni').absolutePath
+    } else {
+        commandLine "$ndkDir/ndk-build",  '-j8','-C', file('src/main/jni').absolutePath
+    }
 }
-
 tasks.withType(JavaCompile) {
     compileTask -> compileTask.dependsOn ndkBuild
 }
