@@ -38,7 +38,7 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
     /**
      * These constants are chosen to imitate common browser behavior for WebP/GIF.
      * If other decoders are added, this behavior should be moved into the WebP/GIF decoders.
-     *
+     * <p>
      * Note that 0 delay is undefined behavior in the GIF standard.
      */
     private static final long MIN_DELAY_MS = 20;
@@ -47,6 +47,7 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
     private static final Object sLock = new Object();
     private static HandlerThread sDecodingThread;
     private static Handler sDecodingThreadHandler;
+
     private static void initializeDecodingThread() {
         synchronized (sLock) {
             if (sDecodingThread != null) return;
@@ -61,7 +62,7 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
     public static interface OnFinishedListener {
         /**
          * Called when a FrameSequenceDrawable has finished looping.
-         *
+         * <p>
          * Note that this is will not be called if the drawable is explicitly
          * stopped, or marked invisible.
          */
@@ -77,7 +78,7 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
         /**
          * Called by FrameSequenceDrawable to release a Bitmap it no longer needs. The Bitmap
          * will no longer be used at all by the drawable, so it is safe to reuse elsewhere.
-         *
+         * <p>
          * This method may be called by FrameSequenceDrawable on any thread.
          */
         public abstract void releaseBitmap(Bitmap bitmap);
@@ -90,7 +91,8 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
         }
 
         @Override
-        public void releaseBitmap(Bitmap bitmap) {}
+        public void releaseBitmap(Bitmap bitmap) {
+        }
     };
 
     /**
@@ -127,7 +129,7 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
 
     /**
      * Define looping behavior of frame sequence.
-     *
+     * <p>
      * Must be one of LOOP_ONCE, LOOP_INF, LOOP_DEFAULT, or LOOP_FINITE.
      */
     public void setLoopBehavior(int loopBehavior) {
@@ -198,7 +200,7 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
             long invalidateTimeMs = 0;
             try {
                 invalidateTimeMs = mFrameSequenceState.getFrame(nextFrame, bitmap, lastFrame);
-            } catch(Exception e) {
+            } catch (Exception e) {
                 // Exception during decode: continue, but delay next frame indefinitely.
                 Log.e(TAG, "exception during decode: " + e);
                 exceptionDuringDecode = true;
@@ -245,7 +247,7 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
     };
 
     private static Bitmap acquireAndValidateBitmap(BitmapProvider bitmapProvider,
-            int minWidth, int minHeight) {
+                                                   int minWidth, int minHeight) {
         Bitmap bitmap = bitmapProvider.acquireBitmap(minWidth, minHeight);
 
         if (bitmap.getWidth() < minWidth
@@ -277,9 +279,9 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
         mPaint.setFilterBitmap(true);
 
         mFrontBitmapShader
-            = new BitmapShader(mFrontBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                = new BitmapShader(mFrontBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
         mBackBitmapShader
-            = new BitmapShader(mBackBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                = new BitmapShader(mBackBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
 
         mLastSwap = 0;
         mNextFrameToDecode = -1;
@@ -321,7 +323,7 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
     /**
      * Marks the drawable as permanently recycled (and thus unusable), and releases any owned
      * Bitmaps drawable to its BitmapProvider, if attached.
-     *
+     * <p>
      * If no BitmapProvider is attached to the drawable, recycle() is called on the Bitmaps.
      */
     public void destroy() {
@@ -355,7 +357,11 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
     @Override
     protected void finalize() throws Throwable {
         try {
-            mFrameSequenceState.destroy();
+            if (mFrameSequenceState != null) {
+                mFrameSequenceState.destroy();
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
         } finally {
             super.finalize();
         }
@@ -546,20 +552,19 @@ public class FrameSequenceDrawable extends Drawable implements Animatable, Runna
      * （1）图像已经开始进行渲染
      * （2）oom 导致不能创建bitmap的对象
      * 因此不要频繁调用
-     *
-     * */
+     */
     public Bitmap getFirstFrame() {
-        Log.d(TAG, "getFirstFrame:"+mNextFrameToDecode);
+        Log.d(TAG, "getFirstFrame:" + mNextFrameToDecode);
 
         //0 或 -1 都是可以的 可以代表bitmap是第一帧的图像。
         //尽量不要在渲染时调用，因为可能存在时序问题
-        if((mNextFrameToDecode == -1 || mNextFrameToDecode == 0) && mFrontBitmap != null && !mFrontBitmap.isRecycled()) {
+        if ((mNextFrameToDecode == -1 || mNextFrameToDecode == 0) && mFrontBitmap != null && !mFrontBitmap.isRecycled()) {
             return mFrontBitmap;
         }
 
         //当前正在渲染，不是第一帧。我们自己解码第一帧
-        Log.d(TAG, "mFrameSequenceState:"+mFrameSequenceState);
-        if(mFrameSequenceState != null) {
+        Log.d(TAG, "mFrameSequenceState:" + mFrameSequenceState);
+        if (mFrameSequenceState != null) {
             final int width = mFrameSequence.getWidth();
             final int height = mFrameSequence.getHeight();
             try {
